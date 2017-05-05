@@ -129,6 +129,7 @@ public class Camera2VideoFragment extends Fragment
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture,
                                               int width, int height) {
+            //openCamera(720, 480);
             openCamera(width, height);
         }
 
@@ -158,6 +159,8 @@ public class Camera2VideoFragment extends Fragment
      * The {@link android.util.Size} of video recording.
      */
     private Size mVideoSize;
+
+    private Size mImageDimension;
 
     /**
      * MediaRecorder
@@ -442,12 +445,15 @@ public class Camera2VideoFragment extends Fragment
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
             StreamConfigurationMap map = characteristics
                     .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+
+            mImageDimension = map.getOutputSizes(SurfaceTexture.class)[0];
             mSensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
             mVideoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
             Log.d(TAG, "video size: " + mVideoSize.getWidth() + "x" + mVideoSize.getHeight());
             mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
                     width, height, mVideoSize);
-            Log.d(TAG, "video size: " + mPreviewSize.getWidth() + "x" + mPreviewSize.getHeight());
+            Log.d(TAG, "preview size: " + mPreviewSize.getWidth() + "x" + mPreviewSize.getHeight());
+            Log.d(TAG, "image size: " + mImageDimension.getWidth() + "x" + mImageDimension.getHeight());
 
             int orientation = getResources().getConfiguration().orientation;
             if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -501,7 +507,8 @@ public class Camera2VideoFragment extends Fragment
             closePreviewSession();
             SurfaceTexture texture = mTextureView.getSurfaceTexture();
             assert texture != null;
-            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            texture.setDefaultBufferSize(mImageDimension.getWidth(), mImageDimension.getHeight());
+            //texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
             mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
 
             Surface previewSurface = new Surface(texture);
@@ -620,11 +627,12 @@ public class Camera2VideoFragment extends Fragment
         }
         try {
             closePreviewSession();
-            setUpImageReader();
+            //setUpImageReader();
             setUpMediaRecorder();
             SurfaceTexture texture = mTextureView.getSurfaceTexture();
             assert texture != null;
-            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            texture.setDefaultBufferSize(mImageDimension.getWidth(), mImageDimension.getHeight());
+            //texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
             mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
             List<Surface> surfaces = new ArrayList<>();
 
@@ -638,9 +646,11 @@ public class Camera2VideoFragment extends Fragment
             surfaces.add(mRecorderSurface);
             mPreviewBuilder.addTarget(mRecorderSurface);
 
+            /*
             mImageSurface = mImageReader.getSurface();
             surfaces.add(mImageSurface);
             mPreviewBuilder.addTarget(mImageSurface);
+            */
 
             // Start a capture session
             // Once the session starts, we can update the UI and start recording
@@ -773,9 +783,9 @@ public class Camera2VideoFragment extends Fragment
     }
 
     private void setUpImageReader() {
-        mImageReader = ImageReader.newInstance(mVideoSize.getWidth(), mVideoSize.getHeight(), ImageFormat.YUV_420_888, 10);
-        //mImageReader = ImageReader.newInstance(mVideoSize.getWidth(), mVideoSize.getHeight(), ImageFormat.YV12, 10);
-        //mImageReader = ImageReader.newInstance(mVideoSize.getWidth(), mVideoSize.getHeight(), ImageFormat.NV21, 10);
+        mImageReader = ImageReader.newInstance(mImageDimension.getWidth(), mImageDimension.getHeight(), ImageFormat.YUV_420_888, 10);
+        //mImageReader = ImageReader.newInstance(mImageDimension.getWidth(), mImageDimension.getHeight(), ImageFormat.YV12, 10);
+        //mImageReader = ImageReader.newInstance(mImageDimension.getWidth(), mImageDimension.getHeight(), ImageFormat.NV21, 10);
         mTime = System.currentTimeMillis();;
         mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
@@ -791,7 +801,7 @@ public class Camera2VideoFragment extends Fragment
                     image.close();
                 }
             }
-        }, null);
+        }, mBackgroundHandler);
         //}, handlerHelper.getBackgroundHandler());
     }
 
