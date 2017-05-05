@@ -26,6 +26,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
@@ -37,6 +38,8 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.Image;
+import android.media.ImageReader;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Handler;
@@ -160,6 +163,10 @@ public class Camera2VideoFragment extends Fragment
      * MediaRecorder
      */
     private MediaRecorder mMediaRecorder;
+
+    private ImageReader mImageReader;
+
+    private long mTime;
 
     /**
      * Whether the app is recording video now
@@ -436,8 +443,10 @@ public class Camera2VideoFragment extends Fragment
                     .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             mSensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
             mVideoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
+            Log.d(TAG, "video size: " + mVideoSize.getWidth() + "x" + mVideoSize.getHeight());
             mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
                     width, height, mVideoSize);
+            Log.d(TAG, "video size: " + mPreviewSize.getWidth() + "x" + mPreviewSize.getHeight());
 
             int orientation = getResources().getConfiguration().orientation;
             if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -610,6 +619,7 @@ public class Camera2VideoFragment extends Fragment
         }
         try {
             closePreviewSession();
+            setUpImageReader();
             setUpMediaRecorder();
             SurfaceTexture texture = mTextureView.getSurfaceTexture();
             assert texture != null;
@@ -626,6 +636,9 @@ public class Camera2VideoFragment extends Fragment
             mRecorderSurface = mMediaRecorder.getSurface();
             surfaces.add(mRecorderSurface);
             mPreviewBuilder.addTarget(mRecorderSurface);
+
+            Surface imageSurface = mImageReader.getSurface();
+            mPreviewBuilder.addTarget(imageSurface);
 
             // Start a capture session
             // Once the session starts, we can update the UI and start recording
@@ -755,6 +768,27 @@ public class Camera2VideoFragment extends Fragment
                     .create();
         }
 
+    }
+
+    private void setUpImageReader() {
+        mImageReader = ImageReader.newInstance(mVideoSize.getWidth(), mVideoSize.getHeight(), ImageFormat.NV21, 10);
+        mTime = System.currentTimeMillis();;
+        mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
+            @Override
+            public void onImageAvailable(ImageReader reader) {
+                long t = System.currentTimeMillis();
+                Log.i(TAG, "onImageAvailable time:" + (t - mTime));
+
+                mTime = System.currentTimeMillis();;
+                Image image = reader.acquireLatestImage();
+                t = System.currentTimeMillis();
+                Log.i(TAG, "acquireLatestImage time:" + (t - mTime));
+                if (image != null) {
+                    image.close();
+                }
+            }
+        }, null);
+        //}, handlerHelper.getBackgroundHandler());
     }
 
 }
