@@ -226,6 +226,7 @@ public class Camera2VideoFragment extends Fragment
     private String mNextVideoAbsolutePath;
     private CaptureRequest.Builder mPreviewBuilder;
     private Surface mRecorderSurface;
+    private Surface mImageSurface;
 
     public static Camera2VideoFragment newInstance() {
         return new Camera2VideoFragment();
@@ -637,8 +638,9 @@ public class Camera2VideoFragment extends Fragment
             surfaces.add(mRecorderSurface);
             mPreviewBuilder.addTarget(mRecorderSurface);
 
-            Surface imageSurface = mImageReader.getSurface();
-            mPreviewBuilder.addTarget(imageSurface);
+            mImageSurface = mImageReader.getSurface();
+            surfaces.add(mImageSurface);
+            mPreviewBuilder.addTarget(mImageSurface);
 
             // Start a capture session
             // Once the session starts, we can update the UI and start recording
@@ -771,7 +773,9 @@ public class Camera2VideoFragment extends Fragment
     }
 
     private void setUpImageReader() {
-        mImageReader = ImageReader.newInstance(mVideoSize.getWidth(), mVideoSize.getHeight(), ImageFormat.NV21, 10);
+        mImageReader = ImageReader.newInstance(mVideoSize.getWidth(), mVideoSize.getHeight(), ImageFormat.YUV_420_888, 10);
+        //mImageReader = ImageReader.newInstance(mVideoSize.getWidth(), mVideoSize.getHeight(), ImageFormat.YV12, 10);
+        //mImageReader = ImageReader.newInstance(mVideoSize.getWidth(), mVideoSize.getHeight(), ImageFormat.NV21, 10);
         mTime = System.currentTimeMillis();;
         mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
