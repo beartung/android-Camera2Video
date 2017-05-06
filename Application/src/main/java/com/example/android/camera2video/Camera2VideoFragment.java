@@ -66,6 +66,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.io.FileOutputStream;
+import java.io.BufferedOutputStream;
 
 public class Camera2VideoFragment extends Fragment
         implements View.OnClickListener, FragmentCompat.OnRequestPermissionsResultCallback {
@@ -170,6 +172,8 @@ public class Camera2VideoFragment extends Fragment
     private ImageReader mImageReader;
 
     private long mTime;
+
+    private int mFrameNum;
 
     /**
      * Whether the app is recording video now
@@ -301,6 +305,7 @@ public class Camera2VideoFragment extends Fragment
     @Override
     public void onResume() {
         super.onResume();
+        mFrameNum = 0;
         startBackgroundThread();
         if (mTextureView.isAvailable()) {
             openCamera(mTextureView.getWidth(), mTextureView.getHeight());
@@ -553,10 +558,11 @@ public class Camera2VideoFragment extends Fragment
             Log.d(TAG, "in updatePreview");
             setUpCaptureRequestBuilder(mPreviewBuilder);
             Log.d(TAG, "setUpCaptureRequestBuilder");
-            //HandlerThread thread = new HandlerThread("CameraPreview");
-            //thread.start();
+            HandlerThread thread = new HandlerThread("CameraPreview");
+            thread.start();
             Log.d(TAG, "thread.start");
-            mPreviewSession.setRepeatingRequest(mPreviewBuilder.build(), null, mBackgroundHandler);
+            Handler handler = new Handler(thread.getLooper());
+            mPreviewSession.setRepeatingRequest(mPreviewBuilder.build(), null, handler);
             Log.d(TAG, "mPreviewSession.setRepeatingRequest");
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -630,6 +636,11 @@ public class Camera2VideoFragment extends Fragment
     private String getVideoFilePath(Context context) {
         return context.getExternalFilesDir(null).getAbsolutePath() + "/"
                 + System.currentTimeMillis() + ".mp4";
+    }
+
+    private String getFrameFilePath(Context context) {
+        return context.getExternalFilesDir(null).getAbsolutePath() + "/"
+                + System.currentTimeMillis();
     }
 
     private void startRecordingVideo() {
@@ -801,7 +812,10 @@ public class Camera2VideoFragment extends Fragment
         mImageReader = ImageReader.newInstance(mImageDimension.getWidth(), mImageDimension.getHeight(), ImageFormat.YUV_420_888, 10);
         //mImageReader = ImageReader.newInstance(mImageDimension.getWidth(), mImageDimension.getHeight(), ImageFormat.YV12, 10);
         //mImageReader = ImageReader.newInstance(mImageDimension.getWidth(), mImageDimension.getHeight(), ImageFormat.NV21, 10);
+        HandlerThread thread = new HandlerThread("CameraPreview");
+        thread.start();
         mTime = System.currentTimeMillis();;
+        Handler handler = new Handler(thread.getLooper());
         mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader reader) {
@@ -810,13 +824,53 @@ public class Camera2VideoFragment extends Fragment
 
                 mTime = System.currentTimeMillis();;
                 Image image = reader.acquireLatestImage();
+                Log.d(TAG, image.getWidth() + "x" + image.getHeight());
                 t = System.currentTimeMillis();
                 Log.i(TAG, "acquireLatestImage time:" + (t - mTime));
+
+                if (mFrameNum++ < 5) {
+
+                    String file = getFrameFilePath(getActivity());
+
+                    mTime = System.currentTimeMillis();;
+                    byte[] jpegData = ImageUtil.imageToByteArray(image);
+                    t = System.currentTimeMillis();
+                    Log.i(TAG, "convert jpg time:" + (t - mTime));
+
+                    mTime = System.currentTimeMillis();;
+                    writeFrame(file + ".jpg", jpegData);
+                    t = System.currentTimeMillis();
+                    Log.i(TAG, "write jpg time:" + (t - mTime));
+
+                    mTime = System.currentTimeMillis();;
+                    byte[] nv21Data = ImageUtil.YUV_420_888toNV21(image);
+                    t = System.currentTimeMillis();
+                    Log.i(TAG, "convert nv21 time:" + (t - mTime));
+
+                    mTime = System.currentTimeMillis();;
+                    writeFrame(file + ".nv21", nv21Data);
+                    t = System.currentTimeMillis();
+                    Log.i(TAG, "write nv21 time:" + (t - mTime));
+                }
+
                 if (image != null) {
                     image.close();
                 }
             }
-        }, mBackgroundHandler);
+        }, handler);
+    }
+
+
+    public static void writeFrame(String fileName, byte[] data) {
+        try {
+            BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(fileName));
+            bos.write(data);
+            bos.flush();
+            bos.close();
+            Log.e(TAG, "" + data.length + " bytes have been written to " + fileName);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }
