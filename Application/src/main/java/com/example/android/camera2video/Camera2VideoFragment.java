@@ -810,6 +810,7 @@ public class Camera2VideoFragment extends Fragment
 
     private void setUpImageReader() {
         mImageReader = ImageReader.newInstance(mImageDimension.getWidth(), mImageDimension.getHeight(), ImageFormat.YUV_420_888, 10);
+        //mImageReader = ImageReader.newInstance(mImageDimension.getWidth(), mImageDimension.getHeight(), ImageFormat.JPEG, 10);
         //mImageReader = ImageReader.newInstance(mImageDimension.getWidth(), mImageDimension.getHeight(), ImageFormat.YV12, 10);
         //mImageReader = ImageReader.newInstance(mImageDimension.getWidth(), mImageDimension.getHeight(), ImageFormat.NV21, 10);
         HandlerThread thread = new HandlerThread("CameraPreview");
@@ -820,40 +821,59 @@ public class Camera2VideoFragment extends Fragment
             @Override
             public void onImageAvailable(ImageReader reader) {
                 long t = System.currentTimeMillis();
-                Log.i(TAG, "onImageAvailable time:" + (t - mTime));
+                Log.i(TAG, "onImageAvailable frame " + mFrameNum + " time:" + (t - mTime));
 
                 mTime = System.currentTimeMillis();;
                 Image image = reader.acquireLatestImage();
-                Log.d(TAG, image.getWidth() + "x" + image.getHeight());
-                t = System.currentTimeMillis();
-                Log.i(TAG, "acquireLatestImage time:" + (t - mTime));
-
-                if (mFrameNum++ < 5) {
-
-                    String file = getFrameFilePath(getActivity());
-
-                    mTime = System.currentTimeMillis();;
-                    byte[] jpegData = ImageUtil.imageToByteArray(image);
-                    t = System.currentTimeMillis();
-                    Log.i(TAG, "convert jpg time:" + (t - mTime));
-
-                    mTime = System.currentTimeMillis();;
-                    writeFrame(file + ".jpg", jpegData);
-                    t = System.currentTimeMillis();
-                    Log.i(TAG, "write jpg time:" + (t - mTime));
-
-                    mTime = System.currentTimeMillis();;
-                    byte[] nv21Data = ImageUtil.YUV_420_888toNV21(image);
-                    t = System.currentTimeMillis();
-                    Log.i(TAG, "convert nv21 time:" + (t - mTime));
-
-                    mTime = System.currentTimeMillis();;
-                    writeFrame(file + ".nv21", nv21Data);
-                    t = System.currentTimeMillis();
-                    Log.i(TAG, "write nv21 time:" + (t - mTime));
-                }
-
                 if (image != null) {
+                    Log.d(TAG, image.getWidth() + "x" + image.getHeight());
+                    t = System.currentTimeMillis();
+                    Log.i(TAG, "acquireLatestImage time:" + (t - mTime));
+
+                    boolean test = false;
+                    if (mFrameNum++ < 130 && mFrameNum > 120) {
+                    //if (mFrameNum++ < 5) {
+
+                        String file = getFrameFilePath(getActivity());
+
+                        mTime = System.currentTimeMillis();;
+                        if (test) {
+                            byte[] jpegData = ImageUtil.imageToByteArray(image);
+                            t = System.currentTimeMillis();
+                            Log.i(TAG, "convert jpg time:" + (t - mTime));
+
+                            mTime = System.currentTimeMillis();;
+                            writeFrame(file + ".jpg", jpegData);
+                            t = System.currentTimeMillis();
+                            Log.i(TAG, "write jpg time:" + (t - mTime));
+
+                            mTime = System.currentTimeMillis();;
+                            byte[] nv21Data = ImageUtil.YUV_420_888toNV21(image);
+                            t = System.currentTimeMillis();
+                            Log.i(TAG, "convert nv21 time:" + (t - mTime));
+
+                            mTime = System.currentTimeMillis();;
+                            writeFrame(file + ".nv21", nv21Data);
+                            t = System.currentTimeMillis();
+                            Log.i(TAG, "write nv21 time:" + (t - mTime));
+                        } else {
+
+                            mTime = System.currentTimeMillis();;
+                            ImageUtil.compressToJpeg(file + ".jpg", image);
+                            t = System.currentTimeMillis();
+                            Log.i(TAG, "write jpg time:" + (t - mTime));
+
+                            mTime = System.currentTimeMillis();;
+                            byte[] nv21Data = ImageUtil.getDataFromImage(image, ImageUtil.COLOR_FormatNV21);
+                            t = System.currentTimeMillis();
+                            Log.i(TAG, "convert nv21 time:" + (t - mTime));
+
+                            mTime = System.currentTimeMillis();;
+                            writeFrame(file + ".nv21", nv21Data);
+                            t = System.currentTimeMillis();
+                            Log.i(TAG, "write nv21 time:" + (t - mTime));
+                        }
+                    }
                     image.close();
                 }
             }
