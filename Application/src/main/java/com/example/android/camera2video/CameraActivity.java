@@ -15,9 +15,14 @@
  */
 
 package com.example.android.camera2video;
-
 import android.app.Activity;
+import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.Display;
+import android.view.Surface;
+import android.view.WindowManager;
+
 
 public class CameraActivity extends Activity {
 
@@ -25,6 +30,26 @@ public class CameraActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
+            WindowManager w = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+            Display d = w.getDefaultDisplay();
+            int rotation = d.getRotation();
+			int SCREEN_WIDTH;
+			int SCREEN_HEIGHT;
+            // 根据屏幕方向获取手机屏幕的真实宽度
+            if (rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180) {
+                SCREEN_WIDTH = d.getWidth();
+            } else {
+                SCREEN_WIDTH = d.getHeight();
+            }
+            if (rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180) {
+                SCREEN_HEIGHT = d.getHeight();
+            } else {
+                SCREEN_HEIGHT = d.getWidth();
+            }
+
+			Log.d("TTT", "screen width " + SCREEN_WIDTH + " height " + SCREEN_HEIGHT);
+
+
         if (null == savedInstanceState) {
             getFragmentManager().beginTransaction()
                     .replace(R.id.container, Camera2VideoFragment.newInstance())
