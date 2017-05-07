@@ -451,10 +451,16 @@ public class Camera2VideoFragment extends Fragment
             StreamConfigurationMap map = characteristics
                     .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
+            int index = 0;
+            int i = 0;
             for (Size s: map.getOutputSizes(SurfaceTexture.class)) {
+                if (s.getWidth() == 640 && s.getHeight() == 480) {
+                    index = i;
+                }
                 Log.d(TAG, "size " + s.getWidth() + "x" + s.getHeight());
+                i++;
             }
-            mImageDimension = map.getOutputSizes(SurfaceTexture.class)[20];
+            mImageDimension = map.getOutputSizes(SurfaceTexture.class)[index];
             mSensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
             mVideoSize = mImageDimension;
             //mVideoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
@@ -828,10 +834,11 @@ public class Camera2VideoFragment extends Fragment
                 if (image != null) {
                     Log.d(TAG, image.getWidth() + "x" + image.getHeight());
                     t = System.currentTimeMillis();
-                    Log.i(TAG, "acquireLatestImage time:" + (t - mTime));
+                    Log.i(TAG, "recording " + mIsRecordingVideo + "acquireLatestImage time:" + (t - mTime));
 
                     boolean test = false;
-                    if (mFrameNum++ < 130 && mFrameNum > 120) {
+                    if (mFrameNum < 1) {
+                    //if (mFrameNum++ < 130 && mFrameNum > 120) {
                     //if (mFrameNum++ < 5) {
 
                         String file = getFrameFilePath(getActivity());
